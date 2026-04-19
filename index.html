@@ -1,0 +1,732 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Ruleta de Plebes</title>
+<style>
+  :root {
+    --bg-0: #0b0620;
+    --bg-1: #1a0b3d;
+    --neon-1: #ff2d87;
+    --neon-2: #7b2cff;
+    --neon-3: #00e5ff;
+    --text: #f4f1ff;
+    --muted: #a79cd6;
+    --card: rgba(255, 255, 255, 0.06);
+    --card-border: rgba(255, 255, 255, 0.14);
+  }
+
+  * { box-sizing: border-box; }
+
+  html, body {
+    margin: 0;
+    padding: 0;
+    min-height: 100%;
+    font-family: "Inter", "Segoe UI", system-ui, -apple-system, sans-serif;
+    color: var(--text);
+    background: radial-gradient(ellipse at top, var(--bg-1) 0%, var(--bg-0) 60%, #000 100%);
+    overflow-x: hidden;
+  }
+
+  body::before,
+  body::after {
+    content: "";
+    position: fixed;
+    z-index: -1;
+    width: 60vmax;
+    height: 60vmax;
+    border-radius: 50%;
+    filter: blur(120px);
+    opacity: 0.55;
+    pointer-events: none;
+    animation: float 18s ease-in-out infinite alternate;
+  }
+  body::before {
+    top: -20vmax;
+    left: -15vmax;
+    background: radial-gradient(circle, var(--neon-2), transparent 60%);
+  }
+  body::after {
+    bottom: -25vmax;
+    right: -20vmax;
+    background: radial-gradient(circle, var(--neon-1), transparent 60%);
+    animation-delay: -7s;
+  }
+
+  @keyframes float {
+    0%   { transform: translate(0, 0) scale(1); }
+    100% { transform: translate(6vmax, 4vmax) scale(1.15); }
+  }
+
+  .app {
+    max-width: 820px;
+    margin: 0 auto;
+    padding: 48px 20px 80px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 28px;
+  }
+
+  h1 {
+    margin: 0;
+    font-size: clamp(2.2rem, 5vw, 3.4rem);
+    font-weight: 900;
+    letter-spacing: 0.02em;
+    background: linear-gradient(90deg, var(--neon-3), var(--neon-1), var(--neon-2));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    text-shadow: 0 0 40px rgba(255, 45, 135, 0.25);
+    text-align: center;
+  }
+
+  .subtitle {
+    margin: -20px 0 0;
+    color: var(--muted);
+    font-size: 0.95rem;
+    text-align: center;
+  }
+
+  .mode-switch {
+    display: inline-flex;
+    padding: 6px;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 999px;
+    backdrop-filter: blur(16px);
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  }
+
+  .mode-btn {
+    appearance: none;
+    border: 0;
+    background: transparent;
+    color: var(--muted);
+    font-weight: 600;
+    padding: 10px 22px;
+    border-radius: 999px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    letter-spacing: 0.02em;
+    transition: color 0.25s ease, background 0.25s ease, transform 0.15s ease;
+  }
+
+  .mode-btn:hover { color: var(--text); }
+
+  .mode-btn.active {
+    color: #fff;
+    background: linear-gradient(135deg, var(--neon-2), var(--neon-1));
+    box-shadow: 0 8px 24px rgba(255, 45, 135, 0.35);
+  }
+
+  .question-panel {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 14px 18px;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    backdrop-filter: blur(16px);
+    animation: fadeIn 0.35s ease;
+  }
+
+  .question-panel label {
+    color: var(--muted);
+    font-size: 0.9rem;
+  }
+
+  .question-panel select {
+    appearance: none;
+    background: rgba(0, 0, 0, 0.35);
+    color: var(--text);
+    border: 1px solid var(--card-border);
+    border-radius: 10px;
+    padding: 10px 36px 10px 14px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    background-image: linear-gradient(45deg, transparent 50%, var(--neon-3) 50%),
+                      linear-gradient(135deg, var(--neon-3) 50%, transparent 50%);
+    background-position: calc(100% - 18px) center, calc(100% - 12px) center;
+    background-size: 6px 6px, 6px 6px;
+    background-repeat: no-repeat;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+  }
+
+  .wheel-wrap {
+    position: relative;
+    width: min(90vw, 520px);
+    aspect-ratio: 1 / 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .wheel-wrap::before {
+    content: "";
+    position: absolute;
+    inset: -24px;
+    border-radius: 50%;
+    background: conic-gradient(from 0deg, var(--neon-1), var(--neon-3), var(--neon-2), var(--neon-1));
+    filter: blur(32px);
+    opacity: 0.45;
+    z-index: -1;
+    animation: spin-slow 12s linear infinite;
+  }
+
+  @keyframes spin-slow {
+    to { transform: rotate(360deg); }
+  }
+
+  canvas#wheel {
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    box-shadow:
+      0 0 0 6px rgba(255, 255, 255, 0.04),
+      0 0 0 10px rgba(255, 255, 255, 0.02),
+      0 30px 60px rgba(0, 0, 0, 0.55),
+      inset 0 0 40px rgba(0, 0, 0, 0.4);
+    background: #0a0620;
+  }
+
+  .hub {
+    position: absolute;
+    width: 78px;
+    height: 78px;
+    border-radius: 50%;
+    background: radial-gradient(circle at 30% 30%, #fff, #d9d3ff 40%, #7b2cff 100%);
+    box-shadow:
+      0 10px 25px rgba(0, 0, 0, 0.55),
+      inset 0 -6px 12px rgba(0, 0, 0, 0.35),
+      inset 0 6px 12px rgba(255, 255, 255, 0.65);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 900;
+    font-size: 1.4rem;
+    color: #2a0a5c;
+    pointer-events: none;
+  }
+
+  .pointer {
+    position: absolute;
+    top: -12px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: 0;
+    height: 0;
+    border-left: 18px solid transparent;
+    border-right: 18px solid transparent;
+    border-top: 34px solid #fff;
+    filter: drop-shadow(0 4px 10px rgba(0, 0, 0, 0.5));
+    z-index: 2;
+  }
+  .pointer::after {
+    content: "";
+    position: absolute;
+    top: -38px;
+    left: -12px;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #fff, #c9b8ff);
+    box-shadow: 0 0 18px rgba(255, 255, 255, 0.7);
+  }
+
+  .spin-btn {
+    appearance: none;
+    border: 0;
+    cursor: pointer;
+    color: #fff;
+    font-weight: 900;
+    font-size: 1.15rem;
+    letter-spacing: 0.22em;
+    padding: 18px 52px;
+    border-radius: 999px;
+    background: linear-gradient(135deg, var(--neon-2), var(--neon-1) 60%, #ff7a3d);
+    box-shadow:
+      0 14px 32px rgba(255, 45, 135, 0.45),
+      0 0 0 1px rgba(255, 255, 255, 0.08) inset;
+    transition: transform 0.15s ease, box-shadow 0.2s ease, filter 0.2s ease;
+  }
+
+  .spin-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    filter: brightness(1.08);
+    box-shadow:
+      0 20px 40px rgba(255, 45, 135, 0.55),
+      0 0 0 1px rgba(255, 255, 255, 0.12) inset;
+  }
+
+  .spin-btn:active:not(:disabled) { transform: translateY(1px); }
+
+  .spin-btn:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+  }
+
+  .legend {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 14px;
+    justify-content: center;
+    padding: 14px 18px;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    backdrop-filter: blur(16px);
+  }
+
+  .legend .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 12px;
+    border-radius: 999px;
+    background: rgba(0, 0, 0, 0.25);
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+  .legend .dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    box-shadow: 0 0 10px currentColor;
+  }
+
+  /* Result overlay */
+  .overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(5, 1, 20, 0.75);
+    backdrop-filter: blur(10px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 50;
+    padding: 20px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease;
+  }
+
+  .overlay.show {
+    opacity: 1;
+    pointer-events: auto;
+  }
+
+  .result-card {
+    position: relative;
+    width: min(92vw, 480px);
+    padding: 36px 28px 28px;
+    border-radius: 24px;
+    background: linear-gradient(160deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.02));
+    border: 1px solid var(--card-border);
+    box-shadow: 0 30px 80px rgba(0, 0, 0, 0.6);
+    text-align: center;
+    transform: scale(0.85);
+    transition: transform 0.3s cubic-bezier(.2, 1.4, .4, 1);
+  }
+
+  .overlay.show .result-card { transform: scale(1); }
+
+  .result-label {
+    color: var(--muted);
+    font-size: 0.85rem;
+    letter-spacing: 0.3em;
+    text-transform: uppercase;
+  }
+
+  .winner {
+    margin: 10px 0 18px;
+    font-size: clamp(2.2rem, 8vw, 3.4rem);
+    font-weight: 900;
+    background: linear-gradient(90deg, var(--neon-3), var(--neon-1));
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+  }
+
+  .extra {
+    min-height: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .extra .cat {
+    font-size: clamp(5rem, 18vw, 8rem);
+    animation: bounce 0.7s ease-in-out infinite alternate;
+    filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.4));
+  }
+
+  .extra img {
+    max-width: 100%;
+    max-height: 260px;
+    border-radius: 16px;
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.5);
+    animation: pop 0.5s cubic-bezier(.2, 1.6, .4, 1);
+  }
+
+  @keyframes bounce {
+    from { transform: translateY(0) rotate(-6deg); }
+    to   { transform: translateY(-18px) rotate(6deg); }
+  }
+
+  @keyframes pop {
+    from { transform: scale(0.6); opacity: 0; }
+    to   { transform: scale(1);   opacity: 1; }
+  }
+
+  .close-btn {
+    margin-top: 22px;
+    appearance: none;
+    border: 1px solid var(--card-border);
+    background: rgba(255, 255, 255, 0.06);
+    color: var(--text);
+    padding: 10px 22px;
+    border-radius: 999px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s ease;
+  }
+  .close-btn:hover { background: rgba(255, 255, 255, 0.12); }
+
+  /* Confetti */
+  .confetti {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+    border-radius: 24px;
+  }
+  .confetti span {
+    position: absolute;
+    top: -20px;
+    width: 10px;
+    height: 14px;
+    background: var(--neon-1);
+    opacity: 0.9;
+    animation: fall 2.4s linear forwards;
+  }
+  @keyframes fall {
+    to {
+      transform: translateY(560px) rotate(720deg);
+      opacity: 0;
+    }
+  }
+
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+  <main class="app">
+    <h1>Ruleta de Plebes</h1>
+    <p class="subtitle">Dale click y que el destino decida</p>
+
+    <div class="mode-switch" role="tablist">
+      <button class="mode-btn active" data-mode="random" type="button">Ruleta al azar</button>
+      <button class="mode-btn" data-mode="question" type="button">Ruleta por pregunta</button>
+    </div>
+
+    <div class="question-panel" id="questionPanel" hidden>
+      <label for="questionSelect">Pregunta:</label>
+      <select id="questionSelect">
+        <option>¿Quién es el más gay?</option>
+      </select>
+    </div>
+
+    <div class="wheel-wrap">
+      <div class="pointer"></div>
+      <canvas id="wheel" width="720" height="720"></canvas>
+      <div class="hub">GIRA</div>
+    </div>
+
+    <button id="spin" class="spin-btn" type="button">GIRAR</button>
+
+    <div class="legend" id="legend"></div>
+  </main>
+
+  <div class="overlay" id="overlay" aria-hidden="true">
+    <div class="result-card">
+      <div class="confetti" id="confetti"></div>
+      <div class="result-label">El elegido es</div>
+      <div class="winner" id="winnerName">—</div>
+      <div class="extra" id="extra"></div>
+      <button class="close-btn" id="closeBtn" type="button">Cerrar</button>
+    </div>
+  </div>
+
+<script>
+  const PLAYERS = [
+    { name: "Piña",     color: "#ff2d87" },
+    { name: "Pingü",    color: "#00e5ff" },
+    { name: "Jimmy",    color: "#ffd23f" },
+    { name: "Ham",      color: "#3ddc97" },
+    { name: "Ikenechu", color: "#b14bff" },
+    { name: "Lugardo",  color: "#ff7a3d" }
+  ];
+
+  const canvas   = document.getElementById("wheel");
+  const ctx      = canvas.getContext("2d");
+  const spinBtn  = document.getElementById("spin");
+  const modeBtns = document.querySelectorAll(".mode-btn");
+  const qPanel   = document.getElementById("questionPanel");
+  const overlay  = document.getElementById("overlay");
+  const winnerEl = document.getElementById("winnerName");
+  const extraEl  = document.getElementById("extra");
+  const closeBtn = document.getElementById("closeBtn");
+  const confettiEl = document.getElementById("confetti");
+  const legendEl = document.getElementById("legend");
+
+  let mode = "random";
+  let rotation = 0;
+  let spinning = false;
+
+  function currentSlices() {
+    if (mode === "random") {
+      const pct = 1 / PLAYERS.length;
+      return PLAYERS.map(p => ({ ...p, pct }));
+    }
+    // question mode: Piña = 1%, los otros 5 reparten 99% (19.8% c/u)
+    return PLAYERS.map(p =>
+      p.name === "Piña" ? { ...p, pct: 0.01 } : { ...p, pct: 0.99 / (PLAYERS.length - 1) }
+    );
+  }
+
+  function drawWheel() {
+    const slices = currentSlices();
+    const W = canvas.width;
+    const cx = W / 2, cy = W / 2;
+    const r = W / 2 - 8;
+
+    ctx.clearRect(0, 0, W, W);
+
+    // outer glossy ring
+    ctx.save();
+    ctx.translate(cx, cy);
+    const ringGrad = ctx.createRadialGradient(0, 0, r - 4, 0, 0, r);
+    ringGrad.addColorStop(0, "rgba(255,255,255,0)");
+    ringGrad.addColorStop(1, "rgba(255,255,255,0.15)");
+    ctx.fillStyle = ringGrad;
+    ctx.beginPath();
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+
+    // rotating body
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(rotation);
+
+    let start = -Math.PI / 2;
+    for (const s of slices) {
+      const ang = s.pct * Math.PI * 2;
+      const end = start + ang;
+
+      // slice fill with subtle radial highlight
+      const grad = ctx.createRadialGradient(0, 0, r * 0.15, 0, 0, r);
+      grad.addColorStop(0, shade(s.color, 18));
+      grad.addColorStop(1, shade(s.color, -12));
+
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.arc(0, 0, r, start, end);
+      ctx.closePath();
+      ctx.fillStyle = grad;
+      ctx.fill();
+
+      ctx.strokeStyle = "rgba(255,255,255,0.22)";
+      ctx.lineWidth = 2;
+      ctx.stroke();
+
+      // name (only if slice is big enough to read)
+      if (s.pct > 0.03) {
+        ctx.save();
+        ctx.rotate(start + ang / 2);
+        ctx.textAlign = "right";
+        ctx.textBaseline = "middle";
+        ctx.fillStyle = "rgba(0,0,0,0.35)";
+        ctx.font = "900 28px Inter, system-ui, sans-serif";
+        ctx.fillText(s.name, r - 26, 2);
+        ctx.fillStyle = "#fff";
+        ctx.fillText(s.name, r - 28, 0);
+        ctx.restore();
+      } else {
+        // tiny slice: draw a little star marker
+        ctx.save();
+        ctx.rotate(start + ang / 2);
+        ctx.fillStyle = "#fff";
+        ctx.font = "900 22px Inter, system-ui, sans-serif";
+        ctx.textAlign = "right";
+        ctx.textBaseline = "middle";
+        ctx.fillText("★", r - 20, 0);
+        ctx.restore();
+      }
+
+      start = end;
+    }
+
+    // center rim
+    ctx.beginPath();
+    ctx.arc(0, 0, 52, 0, Math.PI * 2);
+    ctx.fillStyle = "rgba(0,0,0,0.55)";
+    ctx.fill();
+
+    ctx.restore();
+
+    // outer bulbs (decorative)
+    ctx.save();
+    ctx.translate(cx, cy);
+    const bulbs = 18;
+    for (let i = 0; i < bulbs; i++) {
+      const a = (i / bulbs) * Math.PI * 2 + rotation * 0.2;
+      const x = Math.cos(a) * (r - 4);
+      const y = Math.sin(a) * (r - 4);
+      ctx.beginPath();
+      ctx.arc(x, y, 5, 0, Math.PI * 2);
+      ctx.fillStyle = i % 2 ? "#fff" : "#ffd23f";
+      ctx.shadowColor = i % 2 ? "#fff" : "#ffd23f";
+      ctx.shadowBlur = 12;
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  function shade(hex, percent) {
+    const h = hex.replace("#", "");
+    const num = parseInt(h, 16);
+    let r = (num >> 16) & 0xff;
+    let g = (num >> 8) & 0xff;
+    let b = num & 0xff;
+    const p = percent / 100;
+    r = Math.max(0, Math.min(255, Math.round(r + (p > 0 ? 255 - r : r) * p)));
+    g = Math.max(0, Math.min(255, Math.round(g + (p > 0 ? 255 - g : g) * p)));
+    b = Math.max(0, Math.min(255, Math.round(b + (p > 0 ? 255 - b : b) * p)));
+    return "#" + ((r << 16) | (g << 8) | b).toString(16).padStart(6, "0");
+  }
+
+  function renderLegend() {
+    legendEl.innerHTML = "";
+    for (const p of PLAYERS) {
+      const chip = document.createElement("span");
+      chip.className = "chip";
+      chip.innerHTML = `<span class="dot" style="background:${p.color};color:${p.color}"></span>${p.name}`;
+      legendEl.appendChild(chip);
+    }
+  }
+
+  function spin() {
+    if (spinning) return;
+    spinning = true;
+    spinBtn.disabled = true;
+
+    const slices = currentSlices();
+
+    let winnerIdx;
+    if (mode === "random") {
+      winnerIdx = Math.floor(Math.random() * PLAYERS.length);
+    } else {
+      winnerIdx = PLAYERS.findIndex(p => p.name === "Piña");
+    }
+
+    // center (in turns 0..1) of winner slice, starting from top (-90°)
+    let cum = 0;
+    for (let i = 0; i < winnerIdx; i++) cum += slices[i].pct;
+    const centerPct = cum + slices[winnerIdx].pct / 2;
+
+    // small random offset within slice so it doesn't land exactly at center every time
+    const jitter = (Math.random() - 0.5) * slices[winnerIdx].pct * 0.7;
+    const targetPct = centerPct + jitter;
+
+    // rotation so that target slice sits under the top pointer
+    const extraTurns = 6 + Math.floor(Math.random() * 3);
+    const finalRotation = extraTurns * Math.PI * 2 - targetPct * Math.PI * 2;
+
+    const startRot = rotation;
+    const delta = finalRotation - (startRot % (Math.PI * 2));
+    const duration = 5200;
+    const t0 = performance.now();
+
+    function frame(now) {
+      const t = Math.min(1, (now - t0) / duration);
+      const eased = 1 - Math.pow(1 - t, 4);
+      rotation = startRot + delta * eased;
+      drawWheel();
+      if (t < 1) {
+        requestAnimationFrame(frame);
+      } else {
+        spinning = false;
+        spinBtn.disabled = false;
+        showWinner(PLAYERS[winnerIdx].name);
+      }
+    }
+    requestAnimationFrame(frame);
+  }
+
+  function showWinner(name) {
+    winnerEl.textContent = name;
+    extraEl.innerHTML = "";
+
+    if (name === "Jimmy") {
+      extraEl.innerHTML = '<div class="cat">🐱</div>';
+    } else if (name === "Ham") {
+      const img = document.createElement("img");
+      img.src = "Zero.png";
+      img.alt = "Zero";
+      extraEl.appendChild(img);
+    }
+
+    launchConfetti();
+    overlay.classList.add("show");
+    overlay.setAttribute("aria-hidden", "false");
+  }
+
+  function hideWinner() {
+    overlay.classList.remove("show");
+    overlay.setAttribute("aria-hidden", "true");
+  }
+
+  function launchConfetti() {
+    confettiEl.innerHTML = "";
+    const colors = ["#ff2d87", "#00e5ff", "#ffd23f", "#3ddc97", "#b14bff", "#ff7a3d"];
+    for (let i = 0; i < 40; i++) {
+      const s = document.createElement("span");
+      s.style.left = Math.random() * 100 + "%";
+      s.style.background = colors[i % colors.length];
+      s.style.animationDelay = Math.random() * 0.6 + "s";
+      s.style.transform = `rotate(${Math.random() * 360}deg)`;
+      confettiEl.appendChild(s);
+    }
+  }
+
+  modeBtns.forEach(btn => {
+    btn.addEventListener("click", () => {
+      if (spinning) return;
+      modeBtns.forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+      mode = btn.dataset.mode;
+      qPanel.hidden = mode !== "question";
+      drawWheel();
+    });
+  });
+
+  spinBtn.addEventListener("click", spin);
+  closeBtn.addEventListener("click", hideWinner);
+  overlay.addEventListener("click", (e) => {
+    if (e.target === overlay) hideWinner();
+  });
+
+  renderLegend();
+  drawWheel();
+</script>
+</body>
+</html>
