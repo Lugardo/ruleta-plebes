@@ -199,20 +199,24 @@
 
   .hub {
     position: absolute;
-    width: 78px;
-    height: 78px;
+    width: 92px;
+    height: 92px;
     border-radius: 50%;
-    background: radial-gradient(circle at 30% 30%, #fff, #d9d3ff 40%, #7b2cff 100%);
+    background:
+      radial-gradient(circle at 30% 28%, #fff, #c9b8ff 38%, #7b2cff 72%, #2a0a5c 100%);
     box-shadow:
+      0 0 30px rgba(123, 44, 255, 0.55),
       0 10px 25px rgba(0, 0, 0, 0.55),
-      inset 0 -6px 12px rgba(0, 0, 0, 0.35),
-      inset 0 6px 12px rgba(255, 255, 255, 0.65);
+      inset 0 -8px 14px rgba(0, 0, 0, 0.45),
+      inset 0 8px 14px rgba(255, 255, 255, 0.7);
     display: flex;
     align-items: center;
     justify-content: center;
     font-weight: 900;
-    font-size: 1.4rem;
-    color: #2a0a5c;
+    font-size: 1rem;
+    letter-spacing: 0.25em;
+    color: #fff;
+    text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
     pointer-events: none;
   }
 
@@ -506,36 +510,50 @@
     const slices = currentSlices();
     const W = canvas.width;
     const cx = W / 2, cy = W / 2;
-    const r = W / 2 - 8;
+    const rimOuter = W / 2 - 4;
+    const r = W / 2 - 34;          // slice radius (leaves room for dark outer band)
 
     ctx.clearRect(0, 0, W, W);
 
-    // outer glossy ring
+    // --- Static metallic outer band ---
     ctx.save();
     ctx.translate(cx, cy);
-    const ringGrad = ctx.createRadialGradient(0, 0, r - 4, 0, 0, r);
-    ringGrad.addColorStop(0, "rgba(255,255,255,0)");
-    ringGrad.addColorStop(1, "rgba(255,255,255,0.15)");
-    ctx.fillStyle = ringGrad;
+    const rimGrad = ctx.createLinearGradient(0, -rimOuter, 0, rimOuter);
+    rimGrad.addColorStop(0, "#2b1766");
+    rimGrad.addColorStop(0.5, "#0a0325");
+    rimGrad.addColorStop(1, "#2b1766");
+    ctx.fillStyle = rimGrad;
     ctx.beginPath();
-    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.arc(0, 0, rimOuter, 0, Math.PI * 2);
     ctx.fill();
+
+    // tiny studs on the dark band
+    const studs = 48;
+    const studR = (rimOuter + r) / 2;
+    for (let i = 0; i < studs; i++) {
+      const a = (i / studs) * Math.PI * 2;
+      ctx.beginPath();
+      ctx.arc(Math.cos(a) * studR, Math.sin(a) * studR, 1.6, 0, Math.PI * 2);
+      ctx.fillStyle = i % 2 ? "rgba(255,255,255,0.65)" : "rgba(255,210,63,0.7)";
+      ctx.fill();
+    }
     ctx.restore();
 
-    // rotating body
+    // --- Rotating wheel body ---
     ctx.save();
     ctx.translate(cx, cy);
     ctx.rotate(rotation);
 
+    // 1) slice fills
     let start = -Math.PI / 2;
     for (const s of slices) {
       const ang = s.pct * Math.PI * 2;
       const end = start + ang;
 
-      // slice fill with subtle radial highlight
-      const grad = ctx.createRadialGradient(0, 0, r * 0.15, 0, 0, r);
-      grad.addColorStop(0, shade(s.color, 18));
-      grad.addColorStop(1, shade(s.color, -12));
+      const grad = ctx.createRadialGradient(0, 0, r * 0.2, 0, 0, r);
+      grad.addColorStop(0, shade(s.color, -22));
+      grad.addColorStop(0.7, s.color);
+      grad.addColorStop(1, shade(s.color, 14));
 
       ctx.beginPath();
       ctx.moveTo(0, 0);
@@ -543,61 +561,93 @@
       ctx.closePath();
       ctx.fillStyle = grad;
       ctx.fill();
-
-      ctx.strokeStyle = "rgba(255,255,255,0.22)";
-      ctx.lineWidth = 2;
-      ctx.stroke();
-
-      // name (only if slice is big enough to read)
-      if (s.pct > 0.03) {
-        ctx.save();
-        ctx.rotate(start + ang / 2);
-        ctx.textAlign = "right";
-        ctx.textBaseline = "middle";
-        ctx.fillStyle = "rgba(0,0,0,0.35)";
-        ctx.font = "900 28px Inter, system-ui, sans-serif";
-        ctx.fillText(s.name, r - 26, 2);
-        ctx.fillStyle = "#fff";
-        ctx.fillText(s.name, r - 28, 0);
-        ctx.restore();
-      } else {
-        // tiny slice: draw a little star marker
-        ctx.save();
-        ctx.rotate(start + ang / 2);
-        ctx.fillStyle = "#fff";
-        ctx.font = "900 22px Inter, system-ui, sans-serif";
-        ctx.textAlign = "right";
-        ctx.textBaseline = "middle";
-        ctx.fillText("★", r - 20, 0);
-        ctx.restore();
-      }
-
       start = end;
     }
 
-    // center rim
-    ctx.beginPath();
-    ctx.arc(0, 0, 52, 0, Math.PI * 2);
-    ctx.fillStyle = "rgba(0,0,0,0.55)";
-    ctx.fill();
+    // 2) glowing dividers
+    start = -Math.PI / 2;
+    ctx.shadowColor = "rgba(255,255,255,0.75)";
+    ctx.shadowBlur = 10;
+    ctx.strokeStyle = "rgba(255,255,255,0.7)";
+    ctx.lineWidth = 1.5;
+    for (const s of slices) {
+      ctx.beginPath();
+      ctx.moveTo(0, 0);
+      ctx.lineTo(Math.cos(start) * r, Math.sin(start) * r);
+      ctx.stroke();
+      start += s.pct * Math.PI * 2;
+    }
+    ctx.shadowBlur = 0;
+
+    // 3) names
+    start = -Math.PI / 2;
+    for (const s of slices) {
+      const ang = s.pct * Math.PI * 2;
+      const mid = start + ang / 2;
+
+      ctx.save();
+      ctx.rotate(mid);
+      ctx.textAlign = "right";
+      ctx.textBaseline = "middle";
+
+      let fontSize;
+      if (s.pct < 0.02)      fontSize = 8;   // Piña en modo pregunta: muy chico
+      else if (s.pct < 0.05) fontSize = 13;
+      else                   fontSize = 30;
+
+      ctx.font = `900 ${fontSize}px Inter, system-ui, sans-serif`;
+      ctx.lineWidth = Math.max(2, fontSize * 0.14);
+      ctx.strokeStyle = "rgba(0,0,0,0.55)";
+      ctx.strokeText(s.name, r - 18, 0);
+      ctx.fillStyle = "#fff";
+      ctx.fillText(s.name, r - 18, 0);
+      ctx.restore();
+
+      start += ang;
+    }
 
     ctx.restore();
 
-    // outer bulbs (decorative)
+    // --- Static inner glowing hub circle ---
     ctx.save();
     ctx.translate(cx, cy);
-    const bulbs = 18;
-    for (let i = 0; i < bulbs; i++) {
-      const a = (i / bulbs) * Math.PI * 2 + rotation * 0.2;
-      const x = Math.cos(a) * (r - 4);
-      const y = Math.sin(a) * (r - 4);
-      ctx.beginPath();
-      ctx.arc(x, y, 5, 0, Math.PI * 2);
-      ctx.fillStyle = i % 2 ? "#fff" : "#ffd23f";
-      ctx.shadowColor = i % 2 ? "#fff" : "#ffd23f";
-      ctx.shadowBlur = 12;
-      ctx.fill();
-    }
+    const hubGrad = ctx.createRadialGradient(0, 0, 4, 0, 0, 58);
+    hubGrad.addColorStop(0, "#1a0a4a");
+    hubGrad.addColorStop(1, "#05011a");
+    ctx.fillStyle = hubGrad;
+    ctx.beginPath();
+    ctx.arc(0, 0, 58, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "rgba(255,255,255,0.25)";
+    ctx.stroke();
+    ctx.restore();
+
+    // --- Neon outline around the slice area ---
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.beginPath();
+    ctx.arc(0, 0, r + 1, 0, Math.PI * 2);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "rgba(255,255,255,0.7)";
+    ctx.shadowColor = "#ff2d87";
+    ctx.shadowBlur = 22;
+    ctx.stroke();
+    ctx.shadowBlur = 0;
+
+    // inner edge highlight (where slices meet dark band)
+    ctx.beginPath();
+    ctx.arc(0, 0, r + 1, 0, Math.PI * 2);
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = "rgba(0,0,0,0.5)";
+    ctx.stroke();
+
+    // outer edge of the dark band
+    ctx.beginPath();
+    ctx.arc(0, 0, rimOuter, 0, Math.PI * 2);
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = "rgba(255,255,255,0.18)";
+    ctx.stroke();
     ctx.restore();
   }
 
